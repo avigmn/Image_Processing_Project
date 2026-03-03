@@ -47,6 +47,9 @@ if __name__ == "__main__":
     
     for video_file in processed_videos:
 
+        if "test" in video_file.lower():
+            continue
+
         output_name = os.path.basename(video_file).replace("_processed.npy", "_features.npy")
         output_path = os.path.join(data_dir, output_name)
         

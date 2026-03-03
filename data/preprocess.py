@@ -46,6 +46,11 @@ if __name__ == "__main__":
         print("No .mp4 files found in the directory.")
     
     for input_video in video_files:
+
+        if "test" in input_video.lower():
+            print(f"Skipping test file: {input_video}")
+            continue
+        
         output_data = input_video.replace(".mp4", "_processed.npy")
         
         if os.path.exists(output_data):

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import glob
 from scipy.fftpack import dctn
 
 def classify_video(video_path, model_path, output_path, block_size=5, motion_threshold=30.0):
@@ -112,13 +113,16 @@ if __name__ == "__main__":
     model_file = "../data/naive_bayes_model.npy"
     os.makedirs("../results", exist_ok=True)
     
-    test_videos = [
-        ("../data/walking_test.mp4", "../results/walking_test_classified.mp4"),
-        ("../data/waving_test.mp4", "../results/waving_test_classified.mp4")
-    ]
+    print("Searching for test videos...")
     
-    for input_vid, output_vid in test_videos:
-        if os.path.exists(input_vid):
+    test_videos = glob.glob("../data/*test*.mp4")
+    
+    if not test_videos:
+        print("No test videos found. Please ensure your video is in the data folder and has 'test' in its filename.")
+    else:
+        for input_vid in test_videos:
+            base_name = os.path.basename(input_vid)
+            output_name = base_name.replace(".mp4", "_classified.mp4")
+            output_vid = os.path.join("../results", output_name)
+            
             classify_video(input_vid, model_file, output_vid, motion_threshold=20.0)
-        else:
-            print(f"\nCould not find {input_vid}. Skipping.")
