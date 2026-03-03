@@ -1,4 +1,4 @@
-# Action Recognition using Spatio-Temporal Volumes
+# Movements Recognition using Spatio-Temporal Volumes
 
 This project is a pure Python implementation of the action recognition algorithm presented in the 2005 paper: **"Efficient Visual Event Detection using Volumetric Features"** by Ke, Sukthankar, and Hebert. 
 
