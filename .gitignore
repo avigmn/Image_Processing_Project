@@ -2,11 +2,7 @@
 *.mp4
 *.avi
 *.mov
-*.npy
 
 # Ignore Python cache
 __pycache__/
 *.pyc
-
-# Exception: DO NOT ignore the pre-trained model
-!data/naive_bayes_model.npy
