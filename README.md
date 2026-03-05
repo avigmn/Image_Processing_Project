@@ -1,4 +1,4 @@
-# Movements Recognition using Spatio-Temporal Volumes
+# Actions Recognition using Spatio-Temporal Volumes
 
 This project is a pure Python implementation of the activity recognition algorithm presented in the 2003 paper: **"Recognizing image 'style' and activities in video using local features and naive Bayes"** by Daniel Keren (Pattern Recognition Letters, 2003).
 
