@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # Ignore DC component (index 0). We want to classify based on movement, not average brightness
     mis[0] = 0 
     
-    top_indices = np.argsort(mis)[-20:]
+    top_indices = np.argsort(mis)[-10:]
     
     print(f"Top feature indices selected: {top_indices}")
     

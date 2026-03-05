@@ -24,14 +24,21 @@ def extract_3d_dct_features(video_array, block_size=5, motion_threshold=20.0):
                                     x-margin : x+margin+1]
                 
                 block_float = block.astype(np.float32)
-                
+
                 # Calculate time derivative
                 time_diff = np.abs(np.diff(block_float, axis=0))
                 if np.mean(time_diff) < motion_threshold:
                     continue  # Skip static blocks
-                
-                block_dct = dctn(block, norm='ortho')
-                
+
+                # Normalize to zero mean and unit variance
+                mean = block_float.mean()
+                std = block_float.std()
+                if std < 1e-6:
+                    continue  # Skip uniform blocks
+                block_norm = (block_float - mean) / std
+
+                block_dct = dctn(block_norm, norm='ortho')
+
                 features.append(block_dct.flatten())
                 
     return np.array(features)

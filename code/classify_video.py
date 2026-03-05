@@ -53,27 +53,35 @@ def classify_video(video_path, model_path, output_path, block_size=5, motion_thr
     scale_y = orig_height / 64.0
     margin = block_size // 2
     
-    boxes_per_frame = {i: [] for i in range(frame_count)}
-    
-    print("Classifying local blocks (Paper Implementation)...")
-    for t in range(margin, time_frames - margin, 2):
-        for y in range(margin, height - margin, 2):
-            for x in range(margin, width - margin, 2):
-                
-                block = video_array[t-margin : t+margin+1, 
-                                    y-margin : y+margin+1, 
+    # 0=unclassified, 1=waving, 2=walking
+    label_maps = np.zeros((frame_count, height, width), dtype=np.int8)
+
+    print("Classifying pixels (Paper Implementation)...")
+    for t in range(margin, time_frames - margin):
+        for y in range(margin, height - margin):
+            for x in range(margin, width - margin):
+
+                block = video_array[t-margin : t+margin+1,
+                                    y-margin : y+margin+1,
                                     x-margin : x+margin+1]
-                
+
                 time_diff = np.abs(np.diff(block, axis=0))
                 if np.mean(time_diff) < motion_threshold:
-                    continue  # Skip on backgrounds 
-                
-                block_dct = dctn(block, norm='ortho').flatten()
+                    continue  # Skip static blocks
+
+                # Normalize to zero mean and unit variance
+                mean = block.mean()
+                std = block.std()
+                if std < 1e-6:
+                    continue  # Skip uniform blocks
+                block_norm = (block - mean) / std
+
+                block_dct = dctn(block_norm, norm='ortho').flatten()
                 selected_features = np.abs(block_dct[indices])
-                
+
                 log_p_wave = np.log(0.5)
                 log_p_walk = np.log(0.5)
-                
+
                 for i in range(len(indices)):
                     if selected_features[i] >= thresholds[i]:
                         log_p_wave += np.log(p_wave_given_f[i])
@@ -81,29 +89,23 @@ def classify_video(video_path, model_path, output_path, block_size=5, motion_thr
                     else:
                         log_p_wave += np.log(1.0 - p_wave_given_f[i])
                         log_p_walk += np.log(1.0 - p_walk_given_f[i])
-                
-                label = 'waving' if log_p_wave > log_p_walk else 'walking'
-                
-                x1 = int((x - margin) * scale_x)
-                y1 = int((y - margin) * scale_y)
-                x2 = int((x + margin + 1) * scale_x)
-                y2 = int((y + margin + 1) * scale_y)
-                
-                boxes_per_frame[t].append((x1, y1, x2, y2, label))
 
-    print("Drawing local block results...")
+                # Confidence filter: skip if winning prob is not >= 2x the other
+                if max(log_p_wave, log_p_walk) < np.log(2) + min(log_p_wave, log_p_walk):
+                    continue
+
+                label_maps[t, y, x] = 1 if log_p_wave > log_p_walk else 2
+
+    print("Drawing per-pixel results...")
     for i in range(frame_count):
         frame = frames_color[i].copy()
-        
-        for box in boxes_per_frame[i]:
-            x1, y1, x2, y2, label = box
-            if label == 'waving':
-                color = (0, 0, 255) # Red for waving
-            else:
-                color = (0, 255, 0) # Green for walking
-                
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
-            
+
+        # Scale 64x64 label map up to original resolution using nearest-neighbor
+        lm_scaled = cv2.resize(label_maps[i].astype(np.uint8), (orig_width, orig_height), interpolation=cv2.INTER_NEAREST)
+
+        frame[lm_scaled == 1] = (0, 255, 255)  # Yellow for waving
+        frame[lm_scaled == 2] = (128, 0, 128)  # Purple for walking
+
         out.write(frame)
         
     out.release()

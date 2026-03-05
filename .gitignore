@@ -6,3 +6,7 @@
 # Ignore Python cache
 __pycache__/
 *.pyc
+
+#Ignore the paper and project instructions file
+Recognizing image ‘‘style’’ and activities in video.pdf
+Project Instructions.pdf
