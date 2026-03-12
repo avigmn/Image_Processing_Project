@@ -1,0 +1,133 @@
+import cv2
+import numpy as np
+import os
+import glob
+from scipy.fftpack import dctn
+
+def classify_video(video_path, model_path, output_path, block_size=5, motion_threshold=30.0):
+    print(f"\nLoading model from {model_path}...")
+    model = np.load(model_path, allow_pickle=True).item()
+    
+    indices = model['indices']
+    thresholds = model['thresholds']
+    p_wave_given_f = model['p_waving_given_f']
+    p_walk_given_f = model['p_walking_given_f']
+    
+    # Cap probabilities to prevent log(0) issues
+    p_wave_given_f = np.clip(p_wave_given_f, 1e-6, 1.0 - 1e-6)
+    p_walk_given_f = np.clip(p_walk_given_f, 1e-6, 1.0 - 1e-6)
+    
+    print(f"Processing video: {video_path}")
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video {video_path}.")
+        return
+
+    orig_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    orig_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    frames_color = []
+    frames_gray_64 = []
+    
+    print("Reading frames...")
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frames_color.append(frame)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        resized = cv2.resize(gray, (64, 64))
+        frames_gray_64.append(resized)
+        
+    cap.release()
+    
+    video_array = np.array(frames_gray_64, dtype=np.float32)
+    time_frames, height, width = video_array.shape
+    
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (orig_width, orig_height))
+    
+    scale_x = orig_width / 64.0
+    scale_y = orig_height / 64.0
+    margin = block_size // 2
+    
+    # 0=unclassified, 1=waving, 2=walking
+    label_maps = np.zeros((frame_count, height, width), dtype=np.int8)
+
+    print("Classifying pixels (Paper Implementation)...")
+    for t in range(margin, time_frames - margin):
+        for y in range(margin, height - margin):
+            for x in range(margin, width - margin):
+
+                block = video_array[t-margin : t+margin+1,
+                                    y-margin : y+margin+1,
+                                    x-margin : x+margin+1]
+
+                time_diff = np.abs(np.diff(block, axis=0))
+                if np.mean(time_diff) < motion_threshold:
+                    continue  # Skip static blocks
+
+                # Normalize to zero mean and unit variance
+                mean = block.mean()
+                std = block.std()
+                if std < 1e-6:
+                    continue  # Skip uniform blocks
+                block_norm = (block - mean) / std
+
+                block_dct = dctn(block_norm, norm='ortho').flatten()
+                selected_features = np.abs(block_dct[indices])
+
+                log_p_wave = np.log(0.5)
+                log_p_walk = np.log(0.5)
+
+                for i in range(len(indices)):
+                    if selected_features[i] >= thresholds[i]:
+                        log_p_wave += np.log(p_wave_given_f[i])
+                        log_p_walk += np.log(p_walk_given_f[i])
+                    else:
+                        log_p_wave += np.log(1.0 - p_wave_given_f[i])
+                        log_p_walk += np.log(1.0 - p_walk_given_f[i])
+
+                # Confidence filter: skip if winning prob is not >= 2x the other
+                if max(log_p_wave, log_p_walk) < np.log(2) + min(log_p_wave, log_p_walk):
+                    continue
+
+                label_maps[t, y, x] = 1 if log_p_wave > log_p_walk else 2
+
+    print("Drawing per-pixel results...")
+    for i in range(frame_count):
+        frame = frames_color[i].copy()
+
+        # Scale 64x64 label map up to original resolution using nearest-neighbor
+        lm_scaled = cv2.resize(label_maps[i].astype(np.uint8), (orig_width, orig_height), interpolation=cv2.INTER_NEAREST)
+
+        frame[lm_scaled == 1] = (0, 255, 255)  # Yellow for waving
+        frame[lm_scaled == 2] = (128, 0, 128)  # Purple for walking
+
+        cv2.putText(frame, "Model: Original (DCT + Naive Bayes)",
+                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+
+        out.write(frame)
+        
+    out.release()
+    print(f"Saved output to: {output_path}")
+
+if __name__ == "__main__":
+    model_file = "../data/naive_bayes_model.npy"
+    os.makedirs("../results", exist_ok=True)
+    
+    print("Searching for test videos...")
+    
+    test_videos = glob.glob("../data/*test*.mp4")
+    
+    if not test_videos:
+        print("No test videos found. Please ensure your video is in the data folder and has 'test' in its filename.")
+    else:
+        for input_vid in test_videos:
+            base_name = os.path.basename(input_vid)
+            output_name = base_name.replace(".mp4", "_original_classified.mp4")
+            output_vid = os.path.join("../results", output_name)
+            
+            classify_video(input_vid, model_file, output_vid, motion_threshold=20.0)

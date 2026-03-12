@@ -7,6 +7,14 @@
 __pycache__/
 *.pyc
 
-#Ignore the paper and project instructions file
-Recognizing image ‘‘style’’ and activities in video.pdf
+# Ignore the paper and project instructions file
+Recognizing image ‘’style’’ and activities in video.pdf
 Project Instructions.pdf
+
+# Ignore intermediate data files (preprocessed frames and extracted features)
+data/*_processed.npy
+data/*_processed_128.npy
+data/*_original_features.npy
+data/*_augmented_features.npy
+data/*_original_128_features.npy
+data/*_augmented_128_features.npy
