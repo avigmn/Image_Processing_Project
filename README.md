@@ -34,7 +34,7 @@ run_all.py          # Full pipeline from scratch (preprocess → train → class
 - Preprocessing: 128×128 grayscale frames (5.2× more training data)
 - Data augmentation: horizontal flipping
 - Features: same 3D DCT, top 20 MI-selected coefficients
-- Classifiers: majority vote of 3 models — Naive Bayes + SVM (RBF) + Logistic Regression
+- Classifiers: majority vote of 3 models - Naive Bayes + SVM (RBF) + Logistic Regression
 - Post-processing: temporal smoothing, dominant-class suppression, blob cleanup
 - Output: `results/*_ensemble_classified.mp4`
 
@@ -52,7 +52,7 @@ pip install -r requirements.txt
 
 ---
 
-## How to Run — Inference Only
+## How to Run - Inference Only
 
 Pre-trained models are included in `data/`. No retraining needed.
 
@@ -73,7 +73,7 @@ Pre-trained models are included in `data/`. No retraining needed.
 
 ---
 
-## Full Pipeline — Train from Scratch
+## Full Pipeline - Train from Scratch
 
 To reproduce the full pipeline (preprocess → extract features → train → classify):
 
@@ -109,6 +109,6 @@ Training videos must be placed in `data/` and must **not** contain "test" in the
 | 1 | Temporal smoothing + blob cleanup | Major visual improvement |
 | 2 | SVM C=1 (cross-validated) | +2.7% accuracy |
 | 3 | Data augmentation (horizontal flip) | Improved robustness |
-| 4 | 128×128 resolution | 5.2× more training data — major improvement |
+| 4 | 128×128 resolution | 5.2× more training data - major improvement |
 | 5 | Ensemble majority vote (NB + SVM + LogReg) | Improved robustness |
 | 6 | Per-frame dominant-class suppression | Reduced cross-contamination |
