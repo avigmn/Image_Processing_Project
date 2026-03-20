@@ -24,3 +24,6 @@ AI helped write the README and project documentation - structure, model descript
 
 ## 7. Presentation Design
 AI helped design the presentation file.
+
+## 8. Final Report
+AI assisted me in turning my notes into a neat draft of the final report.
